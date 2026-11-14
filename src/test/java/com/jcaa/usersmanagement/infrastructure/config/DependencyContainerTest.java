@@ -3,11 +3,17 @@ package com.jcaa.usersmanagement.infrastructure.config;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.exception.PersistenceException;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.controller.UserController;
+import com.jcaa.usersmanagement.application.port.in.CreateColeccionUseCase;
+import com.jcaa.usersmanagement.application.port.in.GetColeccionByNumeroUseCase;
+import com.jcaa.usersmanagement.application.service.dto.command.CreateColeccionCommand;
+import com.jcaa.usersmanagement.application.service.dto.query.GetColeccionByNumeroQuery;
+import com.jcaa.usersmanagement.domain.model.ColeccionModel;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
@@ -54,7 +60,14 @@ class DependencyContainerTest {
       assertNotNull(
           container.userController(),
           "userController() must return a non-null UserController after successful construction");
-    }
+      assertNotNull(
+          container.createColeccionUseCase(),
+          "createColeccionUseCase() must return a non-null use case");
+
+      assertNotNull(
+          container.getColeccionByNumeroUseCase(),
+          "getColeccionByNumeroUseCase() must return a non-null use case");
+      }
   }
 
   // ── userController() — immutable composition graph
@@ -102,6 +115,34 @@ class DependencyContainerTest {
           PersistenceException.class,
           DependencyContainer::new,
           "PersistenceException must propagate without wrapping when DriverManager throws SQLException");
+    }
+  }
+  
+  @Test
+  @DisplayName("Create and GetColeccion use cases share the same in-memory repository")
+  void shouldCreateAndRetrieveColeccionUsingSharedRepository() {
+    // Arrange
+    try (final MockedStatic<DriverManager> mockedDriverManager = mockStatic(DriverManager.class)) {
+      mockedDriverManager
+          .when(
+              () -> DriverManager.getConnection(
+                  any(String.class), any(String.class), any(String.class)))
+          .thenReturn(mockConnection);
+
+      final DependencyContainer container = new DependencyContainer();
+
+      final CreateColeccionCommand command = new CreateColeccionCommand("OBR-001", "Promotor A", 25000.0, 10, 2);
+
+      // Act
+      final ColeccionModel created = container.createColeccionUseCase().execute(command);
+
+      final ColeccionModel retrieved = container
+        .getColeccionByNumeroUseCase()
+        .execute(new GetColeccionByNumeroQuery(created.getNumeroColeccion()));
+
+        // Assert
+        assertEquals(created, retrieved);
+        assertEquals(1, retrieved.getNumeroColeccion());
     }
   }
 }
