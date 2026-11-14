@@ -6,6 +6,8 @@ import com.jcaa.usersmanagement.application.port.in.GetAllUsersUseCase;
 import com.jcaa.usersmanagement.application.port.in.GetUserByIdUseCase;
 import com.jcaa.usersmanagement.application.port.in.LoginUseCase;
 import com.jcaa.usersmanagement.application.port.in.UpdateUserUseCase;
+import com.jcaa.usersmanagement.application.port.in.CreateColeccionUseCase;
+import com.jcaa.usersmanagement.application.port.in.GetColeccionByNumeroUseCase;
 import com.jcaa.usersmanagement.application.service.CreateUserService;
 import com.jcaa.usersmanagement.application.service.DeleteUserService;
 import com.jcaa.usersmanagement.application.service.EmailNotificationService;
@@ -13,11 +15,14 @@ import com.jcaa.usersmanagement.application.service.GetAllUsersService;
 import com.jcaa.usersmanagement.application.service.GetUserByIdService;
 import com.jcaa.usersmanagement.application.service.LoginService;
 import com.jcaa.usersmanagement.application.service.UpdateUserService;
+import com.jcaa.usersmanagement.application.service.CreateColeccionService;
+import com.jcaa.usersmanagement.application.service.GetColeccionByNumeroService;
 import com.jcaa.usersmanagement.infrastructure.adapter.email.JavaMailEmailSenderAdapter;
 import com.jcaa.usersmanagement.infrastructure.adapter.email.SmtpConfig;
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.config.DatabaseConfig;
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.config.DatabaseConnectionFactory;
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.repository.UserRepositoryMySQL;
+import com.jcaa.usersmanagement.infrastructure.adapter.persistence.repository.ColeccionRepositoryInMemory;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.controller.UserController;
 
 import java.sql.Connection;
@@ -39,6 +44,8 @@ public final class DependencyContainer {
   private static final String SMTP_FROM_NAME = "smtp.from.name";
 
   private final UserController userController;
+  private final CreateColeccionUseCase createColeccionUseCase;
+  private final GetColeccionByNumeroUseCase getColeccionByNumeroUseCase;
 
   public DependencyContainer() {
     final AppProperties properties = new AppProperties();
@@ -52,6 +59,9 @@ public final class DependencyContainer {
 
     // Construir Validator para las validaciones en la capa de aplicación
     final Validator validator = ValidatorProvider.buildValidator();
+    final ColeccionRepositoryInMemory coleccionRepository = new ColeccionRepositoryInMemory();
+    this.createColeccionUseCase = new CreateColeccionService(coleccionRepository, validator);
+    this.getColeccionByNumeroUseCase = new GetColeccionByNumeroService(coleccionRepository, validator);
 
     final CreateUserUseCase createUserUseCase =
         new CreateUserService(userRepository, userRepository, emailNotification, validator);
@@ -75,6 +85,14 @@ public final class DependencyContainer {
 
   public UserController userController() {
     return userController;
+  }
+
+  public CreateColeccionUseCase createColeccionUseCase() {
+    return createColeccionUseCase;
+  }
+  
+  public GetColeccionByNumeroUseCase getColeccionByNumeroUseCase() {      
+    return getColeccionByNumeroUseCase;
   }
 
   private static Connection buildDatabaseConnection(final AppProperties properties) {
