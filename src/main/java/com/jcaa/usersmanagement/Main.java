@@ -14,8 +14,17 @@ public final class Main {
   public static void main(final String[] args) {
     log.info("Starting Users Management System...");
     final DependencyContainer container = new DependencyContainer();
+
     try (final Scanner scanner = new Scanner(System.in)) {
-      new UserManagementCli(container.userController(), new ConsoleIO(scanner, System.out)).start();
+      new UserManagementCli(
+          container.userController(),
+          container.createColeccionUseCase(),
+          container.getColeccionByNumeroUseCase(),
+          container.updateColeccionUseCase(),
+          container.deleteColeccionUseCase(),
+          container.getAllColeccionesUseCase(),
+          new ConsoleIO(scanner, System.out))
+          .start();
     }
   }
 }
