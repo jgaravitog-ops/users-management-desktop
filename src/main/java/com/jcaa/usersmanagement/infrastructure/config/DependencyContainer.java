@@ -5,6 +5,7 @@ import com.jcaa.usersmanagement.application.port.in.DeleteUserUseCase;
 import com.jcaa.usersmanagement.application.port.in.GetAllUsersUseCase;
 import com.jcaa.usersmanagement.application.port.in.GetUserByIdUseCase;
 import com.jcaa.usersmanagement.application.port.in.LoginUseCase;
+import com.jcaa.usersmanagement.application.port.in.UpdateColeccionUseCase;
 import com.jcaa.usersmanagement.application.port.in.UpdateUserUseCase;
 import com.jcaa.usersmanagement.application.port.in.CreateColeccionUseCase;
 import com.jcaa.usersmanagement.application.port.in.GetColeccionByNumeroUseCase;
@@ -17,6 +18,7 @@ import com.jcaa.usersmanagement.application.service.LoginService;
 import com.jcaa.usersmanagement.application.service.UpdateUserService;
 import com.jcaa.usersmanagement.application.service.CreateColeccionService;
 import com.jcaa.usersmanagement.application.service.GetColeccionByNumeroService;
+import com.jcaa.usersmanagement.application.service.UpdateColeccionService;
 import com.jcaa.usersmanagement.infrastructure.adapter.email.JavaMailEmailSenderAdapter;
 import com.jcaa.usersmanagement.infrastructure.adapter.email.SmtpConfig;
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.config.DatabaseConfig;
@@ -46,6 +48,7 @@ public final class DependencyContainer {
   private final UserController userController;
   private final CreateColeccionUseCase createColeccionUseCase;
   private final GetColeccionByNumeroUseCase getColeccionByNumeroUseCase;
+  private final UpdateColeccionUseCase updateColeccionUseCase;
 
   public DependencyContainer() {
     final AppProperties properties = new AppProperties();
@@ -62,6 +65,7 @@ public final class DependencyContainer {
     final ColeccionRepositoryInMemory coleccionRepository = new ColeccionRepositoryInMemory();
     this.createColeccionUseCase = new CreateColeccionService(coleccionRepository, validator);
     this.getColeccionByNumeroUseCase = new GetColeccionByNumeroService(coleccionRepository, validator);
+    this.updateColeccionUseCase = new UpdateColeccionService(coleccionRepository, coleccionRepository, validator);
 
     final CreateUserUseCase createUserUseCase =
         new CreateUserService(userRepository, userRepository, emailNotification, validator);
@@ -93,6 +97,10 @@ public final class DependencyContainer {
   
   public GetColeccionByNumeroUseCase getColeccionByNumeroUseCase() {      
     return getColeccionByNumeroUseCase;
+  }
+
+  public UpdateColeccionUseCase updateColeccionUseCase() {
+    return updateColeccionUseCase;
   }
 
   private static Connection buildDatabaseConnection(final AppProperties properties) {
