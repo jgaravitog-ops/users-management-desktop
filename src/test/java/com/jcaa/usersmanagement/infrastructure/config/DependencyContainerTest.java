@@ -13,13 +13,18 @@ import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.controller.Use
 import com.jcaa.usersmanagement.application.port.in.CreateColeccionUseCase;
 import com.jcaa.usersmanagement.application.port.in.GetColeccionByNumeroUseCase;
 import com.jcaa.usersmanagement.application.port.in.UpdateColeccionUseCase;
+import com.jcaa.usersmanagement.application.port.in.DeleteColeccionUseCase;
 import com.jcaa.usersmanagement.application.service.dto.command.CreateColeccionCommand;
 import com.jcaa.usersmanagement.application.service.dto.query.GetColeccionByNumeroQuery;
 import com.jcaa.usersmanagement.application.service.dto.command.UpdateColeccionCommand;
+import com.jcaa.usersmanagement.application.service.dto.command.DeleteColeccionCommand;
+import com.jcaa.usersmanagement.domain.exception.ColeccionNotFoundException;
 import com.jcaa.usersmanagement.domain.model.ColeccionModel;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -27,28 +32,20 @@ import org.mockito.Mock;
 import org.mockito.MockedStatic;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-/**
- * Tests for DependencyContainer.
- *
- * <p>Covers: full wiring succeeds and exposes a non-null UserController, the same UserController
- * instance is returned on every call (immutable composition graph), and a database connection
- * failure during construction propagates as PersistenceException. DriverManager is mocked
- * statically so no real database is required.
- */
 @DisplayName("DependencyContainer")
 @ExtendWith(MockitoExtension.class)
 class DependencyContainerTest {
 
   @Mock private Connection mockConnection;
 
-  // ── constructor + userController() — happy path
-
   @Test
   @DisplayName(
-      "constructor wires all dependencies and userController() returns a non-null UserController")
+      "constructor wires all dependencies and exposes a non-null UserController")
   void shouldWireAllDependenciesAndExposeNonNullUserController() {
     // Arrange
-    try (final MockedStatic<DriverManager> mockedDriverManager = mockStatic(DriverManager.class)) {
+    try (final MockedStatic<DriverManager> mockedDriverManager =
+        mockStatic(DriverManager.class)) {
+
       mockedDriverManager
           .when(
               () ->
@@ -60,36 +57,29 @@ class DependencyContainerTest {
       final DependencyContainer container = new DependencyContainer();
 
       // Assert
-      assertNotNull(
-          container.userController(),
-          "userController() must return a non-null UserController after successful construction");
-      assertNotNull(
-          container.createColeccionUseCase(),
-          "createColeccionUseCase() must return a non-null use case");
-
-      assertNotNull(
-          container.getColeccionByNumeroUseCase(),
-          "getColeccionByNumeroUseCase() must return a non-null use case");
-
-      assertNotNull(
-          container.updateColeccionUseCase(),
-          "updateColeccionUseCase() must return a non-null use case");
-      }
+      assertAll(
+          () -> assertNotNull(container.userController()),
+          () -> assertNotNull(container.createColeccionUseCase()),
+          () -> assertNotNull(container.getColeccionByNumeroUseCase()),
+          () -> assertNotNull(container.updateColeccionUseCase()),
+          () -> assertNotNull(container.deleteColeccionUseCase()));
+    }
   }
-
-  // ── userController() — immutable composition graph
 
   @Test
   @DisplayName("userController() returns the same UserController instance on every call")
   void shouldReturnTheSameUserControllerInstanceOnEveryCall() {
     // Arrange
-    try (final MockedStatic<DriverManager> mockedDriverManager = mockStatic(DriverManager.class)) {
+    try (final MockedStatic<DriverManager> mockedDriverManager =
+        mockStatic(DriverManager.class)) {
+
       mockedDriverManager
           .when(
               () ->
                   DriverManager.getConnection(
                       any(String.class), any(String.class), any(String.class)))
           .thenReturn(mockConnection);
+
       final DependencyContainer container = new DependencyContainer();
 
       // Act
@@ -97,19 +87,19 @@ class DependencyContainerTest {
       final UserController second = container.userController();
 
       // Assert
-      assertSame(first, second, "userController() must return the same instance on every call");
+      assertSame(first, second);
     }
   }
 
-  // ── constructor — database failure → PersistenceException
-
   @Test
-  @DisplayName("constructor propagates PersistenceException when the database connection fails")
+  @DisplayName("constructor propagates PersistenceException when database connection fails")
   void shouldPropagatePersistenceExceptionWhenDatabaseConnectionFails() {
-    // Arrange — exception built before the static mock to avoid intercepting DriverManager
-    // internal calls during SQLException construction
+    // Arrange
     final SQLException cause = new SQLException("Connection refused");
-    try (final MockedStatic<DriverManager> mockedDriverManager = mockStatic(DriverManager.class)) {
+
+    try (final MockedStatic<DriverManager> mockedDriverManager =
+        mockStatic(DriverManager.class)) {
+
       mockedDriverManager
           .when(
               () ->
@@ -120,22 +110,22 @@ class DependencyContainerTest {
       // Act & Assert
       assertThrows(
           PersistenceException.class,
-          DependencyContainer::new,
-          "PersistenceException must propagate without wrapping when DriverManager throws SQLException");
+          DependencyContainer::new);
     }
   }
-  
+
   @Test
-  @DisplayName("Create, Get and Update use cases share the same in-memory repository")
-  void shouldCreateRetrieveAndUpdateColeccionUsingSharedRepository() {
+  @DisplayName("Create, Get, Update and Delete use cases share the same in-memory repository")
+  void shouldCreateRetrieveUpdateAndDeleteColeccionUsingSharedRepository() {
     // Arrange
     try (final MockedStatic<DriverManager> mockedDriverManager =
         mockStatic(DriverManager.class)) {
 
       mockedDriverManager
           .when(
-              () -> DriverManager.getConnection(
-                  any(String.class), any(String.class), any(String.class)))
+              () ->
+                  DriverManager.getConnection(
+                      any(String.class), any(String.class), any(String.class)))
           .thenReturn(mockConnection);
 
       final DependencyContainer container = new DependencyContainer();
@@ -167,9 +157,9 @@ class DependencyContainerTest {
               .execute(new GetColeccionByNumeroQuery(
                   created.getNumeroColeccion()));
 
-      // Assert
+      // Assert: verificar creación, actualización y consulta
       assertAll(
-          "flujo completo de creación, actualización y consulta",
+          "flujo de creación, actualización y consulta",
           () -> assertEquals(1, created.getNumeroColeccion()),
           () -> assertEquals(created.getNumeroColeccion(),
               updated.getNumeroColeccion()),
@@ -181,6 +171,19 @@ class DependencyContainerTest {
           () -> assertEquals(15, retrieved.getExistencias()),
           () -> assertEquals(3, retrieved.getStockMinimo()),
           () -> assertEquals(updated, retrieved));
+
+      // Act: eliminar colección
+      final DeleteColeccionCommand deleteCommand =
+          new DeleteColeccionCommand(created.getNumeroColeccion());
+
+      container.deleteColeccionUseCase().execute(deleteCommand);
+
+      // Assert: comprobar que la colección ya no existe
+      assertThrows(
+          ColeccionNotFoundException.class,
+          () -> container.getColeccionByNumeroUseCase()
+              .execute(new GetColeccionByNumeroQuery(
+                  created.getNumeroColeccion())));
     }
   }
 }
