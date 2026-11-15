@@ -14,6 +14,13 @@ public enum MenuOption {
   UPDATE_USER(4, "Update user"),
   DELETE_USER(5, "Delete user"),
   LOGIN(6, "Login"),
+
+  LIST_COLECCIONES(7, "List all collections"),
+  FIND_COLECCION(8, "Find collection by number"),
+  CREATE_COLECCION(9, "Create collection"),
+  UPDATE_COLECCION(10, "Update collection"),
+  DELETE_COLECCION(11, "Delete collection"),
+
   EXIT(0, "Exit");
 
   private final int number;
@@ -28,4 +35,3 @@ public enum MenuOption {
     return Optional.empty();
   }
 }
-

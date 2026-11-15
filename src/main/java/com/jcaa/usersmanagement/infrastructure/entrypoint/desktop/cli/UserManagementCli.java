@@ -1,12 +1,23 @@
 package com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli;
 
+import com.jcaa.usersmanagement.application.port.in.CreateColeccionUseCase;
+import com.jcaa.usersmanagement.application.port.in.DeleteColeccionUseCase;
+import com.jcaa.usersmanagement.application.port.in.GetAllColeccionesUseCase;
+import com.jcaa.usersmanagement.application.port.in.GetColeccionByNumeroUseCase;
+import com.jcaa.usersmanagement.application.port.in.UpdateColeccionUseCase;
+import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.CreateColeccionHandler;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.CreateUserHandler;
+import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.DeleteColeccionHandler;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.DeleteUserHandler;
+import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.FindColeccionHandler;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.FindUserByIdHandler;
+import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.ListColeccionesHandler;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.ListUsersHandler;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.LoginHandler;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.OperationHandler;
+import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.UpdateColeccionHandler;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.handler.UpdateUserHandler;
+import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.io.ColeccionResponsePrinter;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.io.ConsoleIO;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.io.UserResponsePrinter;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.cli.menu.MenuOption;
@@ -28,12 +39,20 @@ public final class UserManagementCli {
   private static final String MENU_BORDER = "  ==========================================";
 
   private final UserController userController;
+  private final CreateColeccionUseCase createColeccionUseCase;
+  private final GetColeccionByNumeroUseCase getColeccionByNumeroUseCase;
+  private final UpdateColeccionUseCase updateColeccionUseCase;
+  private final DeleteColeccionUseCase deleteColeccionUseCase;
+  private final GetAllColeccionesUseCase getAllColeccionesUseCase;
   private final ConsoleIO console;
 
   public void start() {
     console.println(BANNER);
-    final UserResponsePrinter printer = new UserResponsePrinter(console);
-    runLoop(buildHandlers(printer));
+
+    final UserResponsePrinter userPrinter = new UserResponsePrinter(console);
+    final ColeccionResponsePrinter coleccionPrinter = new ColeccionResponsePrinter(console);
+
+    runLoop(buildHandlers(userPrinter, coleccionPrinter));
   }
 
   private void runLoop(final Map<MenuOption, OperationHandler> handlers) {
@@ -67,14 +86,37 @@ public final class UserManagementCli {
     }
   }
 
-  private Map<MenuOption, OperationHandler> buildHandlers(final UserResponsePrinter printer) {
-    return Map.of(
-        MenuOption.LIST_USERS,  new ListUsersHandler(userController, printer),
-        MenuOption.FIND_USER,   new FindUserByIdHandler(userController, console, printer),
-        MenuOption.CREATE_USER, new CreateUserHandler(userController, console, printer),
-        MenuOption.UPDATE_USER, new UpdateUserHandler(userController, console, printer),
-        MenuOption.DELETE_USER, new DeleteUserHandler(userController, console),
-        MenuOption.LOGIN,       new LoginHandler(userController, console, printer));
+  private Map<MenuOption, OperationHandler> buildHandlers(
+      final UserResponsePrinter userPrinter,
+      final ColeccionResponsePrinter coleccionPrinter) {
+
+    return Map.ofEntries(
+        Map.entry(MenuOption.LIST_USERS,
+            new ListUsersHandler(userController, userPrinter)),
+        Map.entry(MenuOption.FIND_USER,
+            new FindUserByIdHandler(userController, console, userPrinter)),
+        Map.entry(MenuOption.CREATE_USER,
+            new CreateUserHandler(userController, console, userPrinter)),
+        Map.entry(MenuOption.UPDATE_USER,
+            new UpdateUserHandler(userController, console, userPrinter)),
+        Map.entry(MenuOption.DELETE_USER,
+            new DeleteUserHandler(userController, console)),
+        Map.entry(MenuOption.LOGIN,
+            new LoginHandler(userController, console, userPrinter)),
+
+        Map.entry(MenuOption.LIST_COLECCIONES,
+            new ListColeccionesHandler(getAllColeccionesUseCase, coleccionPrinter)),
+        Map.entry(MenuOption.FIND_COLECCION,
+            new FindColeccionHandler(
+                getColeccionByNumeroUseCase, console, coleccionPrinter)),
+        Map.entry(MenuOption.CREATE_COLECCION,
+            new CreateColeccionHandler(
+                createColeccionUseCase, console, coleccionPrinter)),
+        Map.entry(MenuOption.UPDATE_COLECCION,
+            new UpdateColeccionHandler(
+                updateColeccionUseCase, console, coleccionPrinter)),
+        Map.entry(MenuOption.DELETE_COLECCION,
+            new DeleteColeccionHandler(deleteColeccionUseCase, console)));
   }
 
   private void printMenu() {
@@ -82,9 +124,11 @@ public final class UserManagementCli {
     console.println(MENU_BORDER);
     console.println("    Main Menu");
     console.println(MENU_BORDER);
+
     for (final MenuOption option : MenuOption.values()) {
       console.printf("    [%d] %s%n", option.getNumber(), option.getDescription());
     }
+
     console.println(MENU_BORDER);
   }
 }
