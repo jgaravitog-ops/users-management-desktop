@@ -3,6 +3,7 @@ package com.jcaa.usersmanagement.infrastructure.config;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
@@ -11,8 +12,10 @@ import com.jcaa.usersmanagement.infrastructure.adapter.persistence.exception.Per
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.controller.UserController;
 import com.jcaa.usersmanagement.application.port.in.CreateColeccionUseCase;
 import com.jcaa.usersmanagement.application.port.in.GetColeccionByNumeroUseCase;
+import com.jcaa.usersmanagement.application.port.in.UpdateColeccionUseCase;
 import com.jcaa.usersmanagement.application.service.dto.command.CreateColeccionCommand;
 import com.jcaa.usersmanagement.application.service.dto.query.GetColeccionByNumeroQuery;
+import com.jcaa.usersmanagement.application.service.dto.command.UpdateColeccionCommand;
 import com.jcaa.usersmanagement.domain.model.ColeccionModel;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -67,6 +70,10 @@ class DependencyContainerTest {
       assertNotNull(
           container.getColeccionByNumeroUseCase(),
           "getColeccionByNumeroUseCase() must return a non-null use case");
+
+      assertNotNull(
+          container.updateColeccionUseCase(),
+          "updateColeccionUseCase() must return a non-null use case");
       }
   }
 
@@ -119,10 +126,12 @@ class DependencyContainerTest {
   }
   
   @Test
-  @DisplayName("Create and GetColeccion use cases share the same in-memory repository")
-  void shouldCreateAndRetrieveColeccionUsingSharedRepository() {
+  @DisplayName("Create, Get and Update use cases share the same in-memory repository")
+  void shouldCreateRetrieveAndUpdateColeccionUsingSharedRepository() {
     // Arrange
-    try (final MockedStatic<DriverManager> mockedDriverManager = mockStatic(DriverManager.class)) {
+    try (final MockedStatic<DriverManager> mockedDriverManager =
+        mockStatic(DriverManager.class)) {
+
       mockedDriverManager
           .when(
               () -> DriverManager.getConnection(
@@ -131,18 +140,47 @@ class DependencyContainerTest {
 
       final DependencyContainer container = new DependencyContainer();
 
-      final CreateColeccionCommand command = new CreateColeccionCommand("OBR-001", "Promotor A", 25000.0, 10, 2);
+      final CreateColeccionCommand createCommand =
+          new CreateColeccionCommand(
+              "OBR-001", "Promotor A", 25000.0, 10, 2);
 
-      // Act
-      final ColeccionModel created = container.createColeccionUseCase().execute(command);
+      // Act: crear colección
+      final ColeccionModel created =
+          container.createColeccionUseCase().execute(createCommand);
 
-      final ColeccionModel retrieved = container
-        .getColeccionByNumeroUseCase()
-        .execute(new GetColeccionByNumeroQuery(created.getNumeroColeccion()));
+      // Act: actualizar colección
+      final UpdateColeccionCommand updateCommand =
+          new UpdateColeccionCommand(
+              created.getNumeroColeccion(),
+              "OBR-002",
+              "Promotor B",
+              30000.0,
+              15,
+              3);
 
-        // Assert
-        assertEquals(created, retrieved);
-        assertEquals(1, retrieved.getNumeroColeccion());
+      final ColeccionModel updated =
+          container.updateColeccionUseCase().execute(updateCommand);
+
+      // Act: consultar colección actualizada
+      final ColeccionModel retrieved =
+          container.getColeccionByNumeroUseCase()
+              .execute(new GetColeccionByNumeroQuery(
+                  created.getNumeroColeccion()));
+
+      // Assert
+      assertAll(
+          "flujo completo de creación, actualización y consulta",
+          () -> assertEquals(1, created.getNumeroColeccion()),
+          () -> assertEquals(created.getNumeroColeccion(),
+              updated.getNumeroColeccion()),
+          () -> assertEquals(created.getNumeroColeccion(),
+              retrieved.getNumeroColeccion()),
+          () -> assertEquals("OBR-002", retrieved.getClaveObra()),
+          () -> assertEquals("Promotor B", retrieved.getPromotor()),
+          () -> assertEquals(30000.0, retrieved.getPvp()),
+          () -> assertEquals(15, retrieved.getExistencias()),
+          () -> assertEquals(3, retrieved.getStockMinimo()),
+          () -> assertEquals(updated, retrieved));
     }
   }
 }
