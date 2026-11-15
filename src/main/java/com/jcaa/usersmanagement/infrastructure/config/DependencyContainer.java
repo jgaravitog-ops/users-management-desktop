@@ -6,10 +6,12 @@ import com.jcaa.usersmanagement.application.port.in.GetAllUsersUseCase;
 import com.jcaa.usersmanagement.application.port.in.GetUserByIdUseCase;
 import com.jcaa.usersmanagement.application.port.in.LoginUseCase;
 import com.jcaa.usersmanagement.application.port.in.UpdateUserUseCase;
+
 import com.jcaa.usersmanagement.application.port.in.CreateColeccionUseCase;
 import com.jcaa.usersmanagement.application.port.in.GetColeccionByNumeroUseCase;
 import com.jcaa.usersmanagement.application.port.in.UpdateColeccionUseCase;
 import com.jcaa.usersmanagement.application.port.in.DeleteColeccionUseCase;
+import com.jcaa.usersmanagement.application.port.in.GetAllColeccionesUseCase;
 
 import com.jcaa.usersmanagement.application.service.CreateUserService;
 import com.jcaa.usersmanagement.application.service.DeleteUserService;
@@ -18,10 +20,12 @@ import com.jcaa.usersmanagement.application.service.GetAllUsersService;
 import com.jcaa.usersmanagement.application.service.GetUserByIdService;
 import com.jcaa.usersmanagement.application.service.LoginService;
 import com.jcaa.usersmanagement.application.service.UpdateUserService;
+
 import com.jcaa.usersmanagement.application.service.CreateColeccionService;
 import com.jcaa.usersmanagement.application.service.GetColeccionByNumeroService;
 import com.jcaa.usersmanagement.application.service.UpdateColeccionService;
 import com.jcaa.usersmanagement.application.service.DeleteColeccionService;
+import com.jcaa.usersmanagement.application.service.GetAllColeccionesService;
 
 import com.jcaa.usersmanagement.infrastructure.adapter.email.JavaMailEmailSenderAdapter;
 import com.jcaa.usersmanagement.infrastructure.adapter.email.SmtpConfig;
@@ -54,6 +58,7 @@ public final class DependencyContainer {
   private final GetColeccionByNumeroUseCase getColeccionByNumeroUseCase;
   private final UpdateColeccionUseCase updateColeccionUseCase;
   private final DeleteColeccionUseCase deleteColeccionUseCase;
+  private final GetAllColeccionesUseCase getAllColeccionesUseCase;
 
   public DependencyContainer() {
     final AppProperties properties = new AppProperties();
@@ -61,48 +66,65 @@ public final class DependencyContainer {
     final Connection connection = buildDatabaseConnection(properties);
     final UserRepositoryMySQL userRepository = new UserRepositoryMySQL(connection);
 
-    final JavaMailEmailSenderAdapter emailSender = new JavaMailEmailSenderAdapter(buildSmtpConfig(properties));
-    final EmailNotificationService emailNotification = new EmailNotificationService(emailSender);
+    final JavaMailEmailSenderAdapter emailSender =
+        new JavaMailEmailSenderAdapter(buildSmtpConfig(properties));
+    final EmailNotificationService emailNotification =
+        new EmailNotificationService(emailSender);
 
     // Construir Validator para las validaciones en la capa de aplicación
     final Validator validator = ValidatorProvider.buildValidator();
 
     // Crear el repositorio compartido en memoria para Coleccion
-    final ColeccionRepositoryInMemory coleccionRepository = new ColeccionRepositoryInMemory();
+    final ColeccionRepositoryInMemory coleccionRepository =
+        new ColeccionRepositoryInMemory();
 
     // Configurar los casos de uso de Coleccion
-    this.createColeccionUseCase = new CreateColeccionService(coleccionRepository, validator);
+    this.createColeccionUseCase =
+        new CreateColeccionService(coleccionRepository, validator);
 
-    this.getColeccionByNumeroUseCase = new GetColeccionByNumeroService(coleccionRepository, validator);
+    this.getColeccionByNumeroUseCase =
+        new GetColeccionByNumeroService(coleccionRepository, validator);
 
-    this.updateColeccionUseCase = new UpdateColeccionService(
-        coleccionRepository, coleccionRepository, validator);
+    this.updateColeccionUseCase =
+        new UpdateColeccionService(
+            coleccionRepository, coleccionRepository, validator);
 
-    this.deleteColeccionUseCase = new DeleteColeccionService(
-        coleccionRepository, coleccionRepository, validator);
+    this.deleteColeccionUseCase =
+        new DeleteColeccionService(
+            coleccionRepository, coleccionRepository, validator);
 
-    final CreateUserUseCase createUserUseCase = new CreateUserService(
-        userRepository, userRepository, emailNotification, validator);
+    this.getAllColeccionesUseCase =
+        new GetAllColeccionesService(coleccionRepository);
 
-    final UpdateUserUseCase updateUserUseCase = new UpdateUserService(
-        userRepository, userRepository, userRepository,
-        emailNotification, validator);
+    final CreateUserUseCase createUserUseCase =
+        new CreateUserService(
+            userRepository, userRepository, emailNotification, validator);
 
-    final DeleteUserUseCase deleteUserUseCase = new DeleteUserService(userRepository, userRepository, validator);
+    final UpdateUserUseCase updateUserUseCase =
+        new UpdateUserService(
+            userRepository, userRepository, userRepository,
+            emailNotification, validator);
 
-    final GetUserByIdUseCase getUserByIdUseCase = new GetUserByIdService(userRepository, validator);
+    final DeleteUserUseCase deleteUserUseCase =
+        new DeleteUserService(userRepository, userRepository, validator);
 
-    final GetAllUsersUseCase getAllUsersUseCase = new GetAllUsersService(userRepository);
+    final GetUserByIdUseCase getUserByIdUseCase =
+        new GetUserByIdService(userRepository, validator);
 
-    final LoginUseCase loginUseCase = new LoginService(userRepository, validator);
+    final GetAllUsersUseCase getAllUsersUseCase =
+        new GetAllUsersService(userRepository);
 
-    this.userController = new UserController(
-        createUserUseCase,
-        updateUserUseCase,
-        deleteUserUseCase,
-        getUserByIdUseCase,
-        getAllUsersUseCase,
-        loginUseCase);
+    final LoginUseCase loginUseCase =
+        new LoginService(userRepository, validator);
+
+    this.userController =
+        new UserController(
+            createUserUseCase,
+            updateUserUseCase,
+            deleteUserUseCase,
+            getUserByIdUseCase,
+            getAllUsersUseCase,
+            loginUseCase);
   }
 
   public UserController userController() {
@@ -125,13 +147,18 @@ public final class DependencyContainer {
     return deleteColeccionUseCase;
   }
 
+  public GetAllColeccionesUseCase getAllColeccionesUseCase() {
+    return getAllColeccionesUseCase;
+  }
+
   private static Connection buildDatabaseConnection(final AppProperties properties) {
-    final DatabaseConfig config = new DatabaseConfig(
-        properties.get(DB_HOST),
-        properties.getInt(DB_PORT),
-        properties.get(DB_NAME),
-        properties.get(DB_USER),
-        properties.get(DB_PASSWORD));
+    final DatabaseConfig config =
+        new DatabaseConfig(
+            properties.get(DB_HOST),
+            properties.getInt(DB_PORT),
+            properties.get(DB_NAME),
+            properties.get(DB_USER),
+            properties.get(DB_PASSWORD));
 
     return DatabaseConnectionFactory.createConnection(config);
   }

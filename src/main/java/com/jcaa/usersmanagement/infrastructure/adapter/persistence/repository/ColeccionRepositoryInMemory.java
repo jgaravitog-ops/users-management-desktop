@@ -1,18 +1,25 @@
 package com.jcaa.usersmanagement.infrastructure.adapter.persistence.repository;
 
 import com.jcaa.usersmanagement.application.port.out.DeleteColeccionPort;
+import com.jcaa.usersmanagement.application.port.out.GetAllColeccionesPort;
 import com.jcaa.usersmanagement.application.port.out.GetColeccionByNumeroPort;
 import com.jcaa.usersmanagement.application.port.out.SaveColeccionPort;
 import com.jcaa.usersmanagement.application.port.out.UpdateColeccionPort;
 import com.jcaa.usersmanagement.domain.exception.ColeccionNotFoundException;
 import com.jcaa.usersmanagement.domain.model.ColeccionModel;
 
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
 public final class ColeccionRepositoryInMemory
-    implements SaveColeccionPort,GetColeccionByNumeroPort, UpdateColeccionPort, DeleteColeccionPort {
+    implements SaveColeccionPort,
+        GetColeccionByNumeroPort,
+        GetAllColeccionesPort,
+        UpdateColeccionPort,
+        DeleteColeccionPort {
 
   private final Map<Integer, ColeccionModel> colecciones = new HashMap<>();
   private Integer nextNumeroColeccion = 1;
@@ -33,6 +40,11 @@ public final class ColeccionRepositoryInMemory
   public Optional<ColeccionModel> getByNumero(
       final Integer numeroColeccion) {
     return Optional.ofNullable(colecciones.get(numeroColeccion));
+  }
+
+  @Override
+  public List<ColeccionModel> getAll() {
+    return new ArrayList<>(colecciones.values());
   }
 
   @Override
