@@ -3,6 +3,7 @@ package com.jcaa.usersmanagement.infrastructure.adapter.persistence.repository;
 import static org.junit.jupiter.api.Assertions.*;
 
 import com.jcaa.usersmanagement.domain.model.ColeccionModel;
+import java.util.List;
 import java.util.Optional;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -22,8 +23,8 @@ class ColeccionRepositoryInMemoryTest {
   @DisplayName("save() asigna un número y almacena la colección")
   void shouldSaveColeccionWithGeneratedNumber() {
     // Arrange
-    final ColeccionModel coleccion = ColeccionModel.create("OBR-001", "Editorial musical",
-        25000.0, 10, 2);
+    final ColeccionModel coleccion =
+        ColeccionModel.create("OBR-001", "Editorial musical", 25000.0, 10, 2);
 
     // Act
     final ColeccionModel saved = repository.save(coleccion);
@@ -40,8 +41,10 @@ class ColeccionRepositoryInMemoryTest {
   @DisplayName("save() genera números consecutivos")
   void shouldGenerateConsecutiveNumbers() {
     // Arrange
-    final ColeccionModel first = ColeccionModel.create("OBR-001", null, 25000.0, 10, 2);
-    final ColeccionModel second = ColeccionModel.create("OBR-002", null, 30000.0, 5, 1);
+    final ColeccionModel first =
+        ColeccionModel.create("OBR-001", null, 25000.0, 10, 2);
+    final ColeccionModel second =
+        ColeccionModel.create("OBR-002", null, 30000.0, 5, 1);
 
     // Act
     final ColeccionModel savedFirst = repository.save(first);
@@ -57,12 +60,14 @@ class ColeccionRepositoryInMemoryTest {
   @DisplayName("getByNumero() retorna la colección cuando existe")
   void shouldReturnColeccionWhenFound() {
     // Arrange
-    final ColeccionModel coleccion = ColeccionModel.create("OBR-001", null, 25000.0, 10, 2);
+    final ColeccionModel coleccion =
+        ColeccionModel.create("OBR-001", null, 25000.0, 10, 2);
 
     final ColeccionModel saved = repository.save(coleccion);
 
     // Act
-    final Optional<ColeccionModel> result = repository.getByNumero(saved.getNumeroColeccion());
+    final Optional<ColeccionModel> result =
+        repository.getByNumero(saved.getNumeroColeccion());
 
     // Assert
     assertTrue(result.isPresent());
@@ -80,10 +85,44 @@ class ColeccionRepositoryInMemoryTest {
   }
 
   @Test
+  @DisplayName("getAll() retorna todas las colecciones almacenadas")
+  void shouldReturnAllColecciones() {
+    // Arrange
+    final ColeccionModel first =
+        ColeccionModel.create("OBR-001", "Promotor A", 25000.0, 10, 2);
+    final ColeccionModel second =
+        ColeccionModel.create("OBR-002", "Promotor B", 30000.0, 5, 1);
+
+    final ColeccionModel savedFirst = repository.save(first);
+    final ColeccionModel savedSecond = repository.save(second);
+
+    // Act
+    final List<ColeccionModel> result = repository.getAll();
+
+    // Assert
+    assertAll(
+        () -> assertEquals(2, result.size()),
+        () -> assertTrue(result.contains(savedFirst)),
+        () -> assertTrue(result.contains(savedSecond)));
+  }
+
+  @Test
+  @DisplayName("getAll() retorna una lista vacía cuando no existen colecciones")
+  void shouldReturnEmptyListWhenNoColeccionesExist() {
+    // Act
+    final List<ColeccionModel> result = repository.getAll();
+
+    // Assert
+    assertNotNull(result);
+    assertTrue(result.isEmpty());
+  }
+
+  @Test
   @DisplayName("delete() elimina la colección cuando existe")
   void shouldDeleteColeccionWhenFound() {
     // Arrange
-    final ColeccionModel coleccion = ColeccionModel.create("OBR-001", null, 25000.0, 10, 2);
+    final ColeccionModel coleccion =
+        ColeccionModel.create("OBR-001", null, 25000.0, 10, 2);
 
     final ColeccionModel saved = repository.save(coleccion);
 
@@ -98,8 +137,10 @@ class ColeccionRepositoryInMemoryTest {
   @DisplayName("delete() elimina únicamente la colección indicada")
   void shouldDeleteOnlySpecifiedColeccion() {
     // Arrange
-    final ColeccionModel first = ColeccionModel.create("OBR-001", null, 25000.0, 10, 2);
-    final ColeccionModel second = ColeccionModel.create("OBR-002", null, 30000.0, 5, 1);
+    final ColeccionModel first =
+        ColeccionModel.create("OBR-001", null, 25000.0, 10, 2);
+    final ColeccionModel second =
+        ColeccionModel.create("OBR-002", null, 30000.0, 5, 1);
 
     final ColeccionModel savedFirst = repository.save(first);
     final ColeccionModel savedSecond = repository.save(second);

@@ -5,12 +5,14 @@ import static org.junit.jupiter.api.Assertions.assertSame;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertAll;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.mockStatic;
 
 import com.jcaa.usersmanagement.infrastructure.adapter.persistence.exception.PersistenceException;
 import com.jcaa.usersmanagement.infrastructure.entrypoint.desktop.controller.UserController;
 import com.jcaa.usersmanagement.application.port.in.CreateColeccionUseCase;
+import com.jcaa.usersmanagement.application.port.in.GetAllColeccionesUseCase;
 import com.jcaa.usersmanagement.application.port.in.GetColeccionByNumeroUseCase;
 import com.jcaa.usersmanagement.application.port.in.UpdateColeccionUseCase;
 import com.jcaa.usersmanagement.application.port.in.DeleteColeccionUseCase;
@@ -24,6 +26,7 @@ import com.jcaa.usersmanagement.domain.model.ColeccionModel;
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.SQLException;
+import java.util.List;
 
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -61,6 +64,7 @@ class DependencyContainerTest {
           () -> assertNotNull(container.userController()),
           () -> assertNotNull(container.createColeccionUseCase()),
           () -> assertNotNull(container.getColeccionByNumeroUseCase()),
+          () -> assertNotNull(container.getAllColeccionesUseCase()),
           () -> assertNotNull(container.updateColeccionUseCase()),
           () -> assertNotNull(container.deleteColeccionUseCase()));
     }
@@ -115,8 +119,9 @@ class DependencyContainerTest {
   }
 
   @Test
-  @DisplayName("Create, Get, Update and Delete use cases share the same in-memory repository")
-  void shouldCreateRetrieveUpdateAndDeleteColeccionUsingSharedRepository() {
+  @DisplayName(
+      "Create, Get, List, Update and Delete use cases share the same in-memory repository")
+  void shouldCreateRetrieveListUpdateAndDeleteColeccionUsingSharedRepository() {
     // Arrange
     try (final MockedStatic<DriverManager> mockedDriverManager =
         mockStatic(DriverManager.class)) {
@@ -137,6 +142,16 @@ class DependencyContainerTest {
       // Act: crear colección
       final ColeccionModel created =
           container.createColeccionUseCase().execute(createCommand);
+
+      // Act: listar colecciones
+      final List<ColeccionModel> colecciones =
+          container.getAllColeccionesUseCase().execute();
+
+      // Assert: verificar que List recupera la colección creada
+      assertAll(
+          "listado de colecciones",
+          () -> assertEquals(1, colecciones.size()),
+          () -> assertEquals(created, colecciones.get(0)));
 
       // Act: actualizar colección
       final UpdateColeccionCommand updateCommand =
@@ -184,6 +199,9 @@ class DependencyContainerTest {
           () -> container.getColeccionByNumeroUseCase()
               .execute(new GetColeccionByNumeroQuery(
                   created.getNumeroColeccion())));
+
+      // Assert: comprobar que List devuelve una lista vacía después de eliminar
+      assertTrue(container.getAllColeccionesUseCase().execute().isEmpty());
     }
   }
 }
